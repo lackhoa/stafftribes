@@ -67,12 +67,8 @@ function DateSlot ({ date, month, weekIndex, dateIndex, data, setData }) {
     }
   }
 
-  function format(number) {
-    return ("0" + number).slice(-2)
-  }
-
   let available:boolean = data[weekIndex][dateIndex];
-  let className = "border border-slate-700 select-none hover:bg-sky-700";
+  let className = "text-center border border-slate-700 select-none hover:bg-sky-700";
   className += available ? " bg-green-900" : "";
 
   let today = new Date();
@@ -82,7 +78,7 @@ function DateSlot ({ date, month, weekIndex, dateIndex, data, setData }) {
   // NOTE: It's "month+1" because getMonth() is stupid
   return (
       <div onMouseEnter={handleMouse} onMouseDown={handleMouse} className={className}>
-      {format(date)}/{format(month+1)}
+      {date}
       </div>
   )
 };
