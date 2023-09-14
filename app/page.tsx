@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image'
-import { useState } from 'react';
+import { useState, useEffect, FC } from 'react';
 
 type Data = Array<Array<boolean>>;
 
@@ -15,27 +15,27 @@ function hasActiveSlot(): boolean {
 }
 
 // NOTE: #copy from https://stackoverflow.com/a/6117889/4279260
-function getWeekNumber(d) {
+function getWeekNumber(d: Date) {
   d = new Date(d.getTime());
   // Set to nearest Thursday: current date + 4 - current day number
   // Make Sunday's day number 7
-  d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay()||7));
+  d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
   // Get first day of year
   var yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1));
   // Calculate full weeks to nearest Thursday
-  var weekIndexo = Math.ceil(( ( (d - yearStart) / 86400000) + 1)/7);
+  var weekIndexo = Math.ceil(( ( (d.valueOf() - yearStart.valueOf()) / 86400000) + 1)/7);
   // Return array of year and week number
   return weekIndexo;
 }
 
-function addDays(date, offset) {
+function addDays(date: Date, offset: number) {
   let out = new Date(date);
   out.setDate(date.getDate() + offset);
   return out;
 }
 
-function DateSlot ({ date, month, weekIndex, dateIndex, data, setData }) {
-  function handleMouse(event) {
+function DateSlot ({ date, month, weekIndex, dateIndex, data, setData}: any) {
+  function handleMouse(event: any) {
     if (event.buttons == 1) {
       let available:boolean = !data[weekIndex][dateIndex];
       if (!hasActiveSlot()) {
@@ -83,7 +83,7 @@ function DateSlot ({ date, month, weekIndex, dateIndex, data, setData }) {
   )
 };
 
-function Week ({ firstDate, weekIndex, data, setData }) {
+function Week ({ firstDate, weekIndex, data, setData }: any) {
   let id = getWeekNumber(firstDate);
   let days = range_7.map((dateIndex) => {
     let date = addDays(firstDate, dateIndex);
@@ -103,7 +103,20 @@ function Week ({ firstDate, weekIndex, data, setData }) {
   )
 }
 
-function Table({weeks}) {
+class WeekType {
+  constructor(
+    public firstDate: Date,
+    public weekIndex: number,
+    public data: Data,
+    public setData: (d: Data) => void,
+  ) {}
+};
+
+interface TableProps {
+  weeks: WeekType[]
+}
+
+function Table({weeks}: TableProps) {
   let headers = ["Week", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((header) => {
     return (<th className="border border-slate-500 select-none" key={header}>{header}</th>)
   });
@@ -111,7 +124,11 @@ function Table({weeks}) {
       <table className="table-auto border-separate border-spacing-1">
         <tbody>
             <tr>{headers}</tr>
-            {weeks.map((week) => (<tr key={week.props.weekIndex}>{week}</tr>))}
+      {weeks.map(({firstDate, weekIndex, data, setData}) => (
+                    <tr key={weekIndex}>
+                        <Week firstDate={firstDate} weekIndex={weekIndex} data={data} setData={setData}></Week>
+                    </tr>
+                ))}
         </tbody>
       </table>
   )
@@ -123,26 +140,27 @@ export default function Home() {
   let thisMonday = addDays(today, offset);
 
   const [data, setData] = useState(globalCommittedData);
-  document.addEventListener("mouseup", (event) => {
-    // disable active slot
-    globalCommittedWeekIndex = -1;
-    globalCommittedDateIndex = -1;
-    // commit data
-    globalCommittedData = data;
+
+  useEffect(() => {
+    document.addEventListener("mouseup", (event) => {
+      // disable active slot
+      globalCommittedWeekIndex = -1;
+      globalCommittedDateIndex = -1;
+      // commit data
+      globalCommittedData = data;
+    })
   })
 
-  // TODO: #perf #study Wouldn't all cells be rendered every time data changes?
+  // TODO: #perf #study Wouldn't all cells be rendered every time data changes?k
   let weeks = range_7.map((weekIndex) => {
     let firstDate = addDays(thisMonday, weekIndex*7);
-    return (
-        <Week firstDate={firstDate} weekIndex={weekIndex} data={data} setData={setData}></Week>
-    );
+    return new WeekType(firstDate, weekIndex, data, setData);
   })
 
   // TODO: #bug monday could be previous month, which wouldn't need its own section
-  let months = [{month: thisMonday.getMonth(), weeks: []}];
-  weeks.forEach((week) => {
-    let firstDate = week.props.firstDate;
+  let months : Array<{month: number, weeks: Array<WeekType>}> = [{month: thisMonday.getMonth(), weeks: []}];
+  weeks.forEach((week: WeekType) => {
+    let firstDate = week.firstDate;
     let advanceMonth = false;
     let currentMonth = months[months.length-1];
     if (firstDate.getMonth() == currentMonth.month) {
